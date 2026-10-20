@@ -19,18 +19,8 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-      - name: Install Android SDK build tools
-        uses: android-actions/setup-android@v3
 
-      - name: Accept Android SDK licenses
-        run: yes | sdkmanager --licenses
-
-      - name: Install Android SDK components
-        run: |
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-
-
-      - name: Install Android build dependencies
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -43,6 +33,23 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install buildozer cython==0.29.33
+      - name: Set up Android SDK tools
+        uses: android-actions/setup-android@v3
+      - name: Prepare Android SDK
+        run: |
+          export ANDROID_SDK_ROOT="$HOME/.buildozer/android/platform/android-sdk"
+          mkdir -p "$ANDROID_SDK_ROOT"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
+          yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --licenses
+          sdkmanager --sdk_root="$ANDROID_SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0"
+
+      - name: Verify AIDL
+        run: |
+          find "$ANDROID_SDK_ROOT/build-tools" -name aidl -type f
+          test -x "$ANDROID_SDK_ROOT/build-tools/34.0.0/aidl"
 
       - name: Build APK
         run: buildozer -v android debug
